@@ -74,9 +74,24 @@ class Vector:
         return Vector(self.x * scalar, self.y * scalar)
 #-------------------------------------------#
 '''
+# 5.5 用户定义的可调用类型
+import random
+class BingoCage:
+    def __init__(self, items):
+        self._items = list(items)
+        random.shuffle(self._items)   # 随机洗牌
+    def pick(self):
+        try:  # list = [1,2,3]; list.pop()结果为3，再输入list,结果为[1,2]
+            return self._items.pop()
+        except ImportError:
+            raise LookupError('pick from empty BigoCate')
+    def __call__(self):
+        return self.pick()  # 实现bingo.pick() 的快捷方式是 bingo()
 
-
-
+bingo = BingoCage(range(3))
+print( bingo.pick() )   # 结果：0 or 1 or 2
+print( bingo() )   # 上方已经定义了随机洗牌
+print( callable(bingo) )  # True
 
 
 
