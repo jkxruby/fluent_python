@@ -73,7 +73,7 @@ class Vector:
     def __mul__(self, other):
         return Vector(self.x * scalar, self.y * scalar)
 #-------------------------------------------#
-'''
+
 # 5.5 用户定义的可调用类型
 import random
 class BingoCage:
@@ -94,12 +94,28 @@ print( bingo() )   # 上方已经定义了随机洗牌
 print( callable(bingo) )  # True
 
 
+# 16-3 定义一个计算移动平均值的协程
 
+def averager():
+    total = 0.0
+    count = 0
+    average = None   # 初始next后，程序停止在 yield average这里
+    while 1:
+        term = yield average   # 第一次接收10是从 term = yield 开始的，term立即被赋值 10
+        total += term
+        count += 1
+        average = total/count
 
+test = averager()
+next(test)
 
+print( test.send(10) )
+print( test.send(20) )
+print( test.send(30) )
 
+# 结果 10.0;15.0;20.0;
 
-
+'''
 
 
 
