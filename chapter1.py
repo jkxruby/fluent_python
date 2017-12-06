@@ -96,12 +96,17 @@ print( callable(bingo) )  # True
 
 # 16-3 定义一个计算移动平均值的协程
 
+from collections import namedtuple
+Result = namedtuple('Result', 'count average')
+
 def averager():
     total = 0.0
     count = 0
     average = None   # 初始next后，程序停止在 yield average这里
     while 1:
         term = yield average   # 第一次接收10是从 term = yield 开始的，term立即被赋值 10
+        if term is None:
+            break
         total += term
         count += 1
         average = total/count
@@ -113,19 +118,118 @@ print( test.send(10) )
 print( test.send(20) )
 print( test.send(30) )
 
+try:
+    test.send(None)
+except StopIteration as exc:
+    result = exc.value
+result
+print( result )
+
 # 结果 10.0;15.0;20.0;
 
+
+
+import os
+
+print('Process (%s) start...' % os.getpid())
+# Only works on Unix/Linux/Mac:
+pid = os.fork()
+if pid == 0:
+    print('I am child process (%s) and my parent is %s.' % (os.getpid(), os.getppid()))
+else:
+    print('I (%s) just created a child process (%s).' % (os.getpid(), pid))
+
+
+
+
+from multiprocessing import Process
+import os
+
+# 子进程要执行的代码
+def run_proc(name):
+    print('Run child process %s (%s)...' % (name, os.getpid()))
+
+if __name__=='__main__':
+    print('Parent process %s.' % os.getpid())
+    p = Process(target=run_proc, args=('test',))
+    print('Child process will start.')
+    p.start()
+    p.join()
+    print('Child process end.')
+
 '''
+# 测试metaclass
+# 先定义Field及相关
+class Field(object):
+    def __init__(self,name,column_type):
+        self.name = name
+        self.column_type = column_type
+
+    def __str__(self):
+        return '<%s:%s>' %(self.__class__.__name__, self.name)
+
+class StringField(Field):
+    def __init__(self,name):
+        super(StringField, self).__init__(name,'varchar(100)')
+
+class IntegerField(Field):
+    def __init__(self,name):
+        super(IntegerField, self).__init__(name, 'bigint')
+
+# 编写元类
+class ModelMetaclass(type):
+    def __new__(cls, name, bases, attrs):
+        if name =='Model':
+            return type.__new__(cls,name,bases,attrs)
+        print('found model: %s' % name)
+
+        mappings = dict()
+        for k,v in attrs.items():
+            if isinstance(v, Field):
+                print('found mapping: %s ==> %s' %(k,v) )
+                mappings[k] =v
+        for k in mappings.keys():
+            attrs.pop(k)
+        attrs['__mappings__'] = mappings
+        attrs['__table__'] = name
+        return type.__new__(cls,name,bases,attrs)
+
+# 编写基类
+class Model(dict, metaclass=ModelMetaclass):
+    def __init__(self, **kw):
+        super(Model, self).__init__(**kw)
+
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(r" 'Model' object has no attribute '%s' " % key )
 
 
+    def __setattr__(self, key, value):
+        self[key] = value
 
+    def save(self):
+        fields = []
+        params = []
+        args = []
+        for k,v in self.__mappings__.items():
+            fields.append(v.name)
+            params.append('?')
+            args.append(getattr(self, k, None))
+        sql = 'insert into %s (%s) values (%s) '% (self.__table__, ','.join(fields), ','.join(params))
+        print('SQL: %s' % sql)
+        print('ARGS: %s ' % str(args) )
 
+# 定义user
+class User(Model):
+    id = IntegerField('id')
+    name = StringField('username')
+    email = StringField('email')
+    password = StringField('password')
 
-
-
-
-
-
+u = User(id=123, name = 'jk', email = '888@qq.com', password = 'my-pwd')
+u.save()
 
 
 
